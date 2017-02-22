@@ -22,7 +22,7 @@ eventsCollector({
   toBlock: 'latest',
   blocksExclude: 0,
   timestamps: true,
-}).then(events => {
-  console.log(JSON.stringify(events));
+}).then(([events, parsedToBlock]) => {
+  console.log(parsedToBlock, JSON.stringify(events));
 })
 ```
