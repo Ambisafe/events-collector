@@ -1,0 +1,13 @@
+{
+  "author": "Oleksii Matiiasevych <oleksii@ambisafe.co>",
+  "name": "events-collector",
+  "repository": "https://github.com/Ambisafe/events-collector",
+  "description": "Convenient way to parse events from Ethereum blockchain.",
+  "version": "0.0.1",
+  "main": "events-collector.js",
+  "dependencies": {
+    "bluebird": "^3.4.6",
+    "web3": "^0.18.2",
+    "web3-provider-engine": "^8.0.7"
+  }
+}
