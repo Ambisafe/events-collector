@@ -2,6 +2,12 @@
 
 Convenient way to parse events from Ethereum blockchain.
 
+## Installation
+
+```bash
+npm install events-collector@github:Ambisafe/events-collector
+```
+
 ## Usage
 
 ```js
