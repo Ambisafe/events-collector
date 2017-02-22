@@ -105,6 +105,7 @@ function eventsCollector(args) {
   }).then(parsed => {
     parsedToBlock = parsed;
     if (fromBlock >= parsedToBlock) {
+      parsedToBlock = fromBlock;
       return [];
     }
     log(`Collecting events from blocks ${fromBlock + 1}-${parsedToBlock}.`);

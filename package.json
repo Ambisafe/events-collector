@@ -3,7 +3,7 @@
   "name": "events-collector",
   "repository": "https://github.com/Ambisafe/events-collector",
   "description": "Convenient way to parse events from Ethereum blockchain.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "events-collector.js",
   "dependencies": {
     "bluebird": "^3.4.6",
