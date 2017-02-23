@@ -58,7 +58,7 @@ function eventsCollector(args) {
       return new Promise((resolve, reject) => {
         waitList.push({blockHash, resolve, reject});
         sendRequest();
-      }).catch(() => Promise.delay(5000).then(() => poll(hash)));
+      }).catch(() => Promise.delay(5000).then(() => poll(blockHash)));
     };
     return poll;
   })();
