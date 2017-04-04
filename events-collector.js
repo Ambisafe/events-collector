@@ -114,6 +114,13 @@ function eventsCollector(args) {
     parts[parts.length - 1][1] = parsedToBlock;
     return collectEvents(contract.allEvents, parts);
   }).then(newEvents => {
+    let filtered = newEvents.filter(event => !!event.args);
+    let skipped = newEvents.length - filtered.length;
+    if (skipped > 0) {
+      log(`Warning: ${skipped} events skipped. Consider updating ABI.`);
+    }
+    return filtered;
+  }).then(newEvents => {
     log(`${newEvents.length} new events found.`);
     return timestamps ? Promise.all(newEvents.map(timestamp)).tap(() => log('Timestamps populated.')) : newEvents;
   }).then(events => [events, parsedToBlock])
