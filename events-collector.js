@@ -2,9 +2,22 @@
 
 const Promise = require('bluebird');
 const Web3 = require('web3');
+const SolidityEvent = require('web3/lib/web3/event');
 const ProviderEngine = require('web3-provider-engine');
 const FilterSubprovider = require('web3-provider-engine/subproviders/filters');
 const RpcSubprovider = require('web3-provider-engine/subproviders/rpc');
+
+function getTopics(abi) {
+  let topics = {};
+  for (let i = 0; i < abi.length; i++) {
+    let item = abi[i];
+    if (item.type != "event") continue;
+    let signature = item.name + "(" + item.inputs.map(function(input) {return input.type;}).join(",") + ")";
+    let hash = web3.sha3(signature);
+    topics[hash] = item;
+  }
+  return topics;
+}
 
 function eventsCollector(args) {
   const rpcUrl = args.rpcUrl || 'http://localhost:8545';
@@ -46,11 +59,16 @@ function eventsCollector(args) {
         const request = waitList.shift();
         web3.eth.getBlockAsync(request.blockHash)
         .timeout(5000)
-        .then(request.resolve)
+        .then(block => {
+          if (block === null) {
+            return Promise.reject(new Error('Block response is null'));
+          }
+          return request.resolve(block);
+        })
         .catch(request.reject)
         .finally(() => {
           flows--;
-          sendRequest();
+          setImmediate(sendRequest);
         });
       }
     };
@@ -58,7 +76,12 @@ function eventsCollector(args) {
       return new Promise((resolve, reject) => {
         waitList.push({blockHash, resolve, reject});
         sendRequest();
-      }).catch(() => Promise.delay(5000).then(() => poll(blockHash)));
+      }).catch(err => {
+        if (err && (err.message == 'Block response is null')) {
+          return poll(blockHash);
+        }
+        return Promise.delay(5000).then(() => poll(blockHash))
+      });
     };
     return poll;
   })();
@@ -75,11 +98,33 @@ function eventsCollector(args) {
     };
   })();
 
-  let collectEvents = (allEvents, blockParts) => {
+  let decodeLogs = (logs, topics) => {
+    return logs.map(log => {
+      let logABI = topics[log.topics[0]];
+
+      if (logABI == null) {
+        return null;
+      }
+
+      let decoder = new SolidityEvent(null, logABI, log.address);
+      try {
+        return decoder.decode(log);
+      } catch(e) {
+        console.log(JSON.stringify(log));
+        throw e;
+      }
+    }).filter(log => {
+      return log != null;
+    });
+  };
+
+  let collectEvents = (address, abi, blockParts) => {
+    const decodeTopics = getTopics(abi);
+    const topics = Object.keys(decodeTopics);
     return blockParts.reduce(
       (prev, curr) =>
         prev.then(events => {
-          let filter = Promise.promisifyAll(allEvents({fromBlock: curr[0], toBlock: curr[1]}));
+          let filter = Promise.promisifyAll(web3.eth.filter({address, topics: [topics.length > 0 ? topics : null], fromBlock: curr[0], toBlock: curr[1]}));
           return filter.getAsync()
             .then(results => {
               log(`${curr[0]}-${curr[1]}: ${results.length} events found...`);
@@ -88,10 +133,9 @@ function eventsCollector(args) {
             .finally(() => filter.stopWatchingAsync());
         }),
       Promise.resolve([])
-    );
+    ).then(logs => decodeLogs(logs, decodeTopics));
   }
 
-  const contract = Promise.promisifyAll(web3.eth.contract(abi).at(address));
   let parsedToBlock;
   return engineReady
   .then(() => web3.eth.getBlockNumberAsync())
@@ -112,7 +156,7 @@ function eventsCollector(args) {
     let parts = Array.from({length: Math.ceil((parsedToBlock - fromBlock) / blockStep)}, (v, k) => [fromBlock + (blockStep * k) + 1, fromBlock + (blockStep * (k + 1))]);
     // Set last part parsedToBlock to requested parsedToBlock
     parts[parts.length - 1][1] = parsedToBlock;
-    return collectEvents(contract.allEvents, parts);
+    return collectEvents(address, abi, parts);
   }).then(newEvents => {
     let filtered = newEvents.filter(event => !!event.args);
     let skipped = newEvents.length - filtered.length;
