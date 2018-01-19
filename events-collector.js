@@ -7,17 +7,7 @@ const ProviderEngine = require('web3-provider-engine');
 const FilterSubprovider = require('web3-provider-engine/subproviders/filters');
 const RpcSubprovider = require('web3-provider-engine/subproviders/rpc');
 
-function getTopics(abi) {
-  let topics = {};
-  for (let i = 0; i < abi.length; i++) {
-    let item = abi[i];
-    if (item.type != "event") continue;
-    let signature = item.name + "(" + item.inputs.map(function(input) {return input.type;}).join(",") + ")";
-    let hash = web3.sha3(signature);
-    topics[hash] = item;
-  }
-  return topics;
-}
+
 
 function eventsCollector(args) {
   const rpcUrl = args.rpcUrl || 'http://localhost:8545';
@@ -47,6 +37,18 @@ function eventsCollector(args) {
   engine.start();
 
   web3.eth = Promise.promisifyAll(web3.eth);
+  
+  const getTopics = (abi) => {
+    let topics = {};
+    for (let i = 0; i < abi.length; i++) {
+      let item = abi[i];
+      if (item.type != 'event') continue;
+      let signature = item.name + "(" + item.inputs.map(function(input) {return input.type;}).join(",") + ")";
+      let hash = web3.sha3(signature);
+      topics[hash] = item;
+    }
+    return topics;
+  };
 
   // Add threshold of parallel requests allowed for getBlock
   const getBlockInQueue = (() => {
