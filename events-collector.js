@@ -18,7 +18,7 @@ function eventsCollector(args) {
   const fromBlock = args.fromBlock || 0;
   const toBlock = args.toBlock || 'latest';
   const blocksExclude = args.blocksExclude || 0;
-  const timestamps = !!(args.timestamps || true);
+  const timestamps = args.timestamps == undefined ? true : args.timestamps;
 
   const engine = new ProviderEngine();
   const web3 = new Web3(engine);
